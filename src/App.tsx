@@ -1,730 +1,217 @@
-// src/App.tsx
-import React, { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RANK_OPTIONS, TEAM_CAP, scorePlayer, type RankKey } from "./scoring";
-import { addTeam, clearTeams, loadTeams, type Player } from "./storage";
 import "./index.css";
 
-type PlayerRow = Player;
-
-/* ---------- UI styles ---------- */
-const page: React.CSSProperties = {
-  maxWidth: 980,
-  margin: "0 auto",
-  padding: 24,
-  fontFamily: "system-ui",
-  color: "#111",
+type Player = { ign: string; rankA1: RankKey; rankA5: RankKey };
+const makePlayer = (): Player => ({ ign: "", rankA1: "iron", rankA5: "iron" });
+const makeRoster = () => Array.from({ length: 5 }, makePlayer);
+const isValidRiotId = (s: string) => {
+  const parts = s.trim().split("#");
+  return parts.length === 2 && parts[0].trim().length >= 3 &&
+    parts[0].trim().length <= 16 && /^[a-zA-Z0-9]{3,5}$/.test(parts[1]);
 };
 
-const topBar: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "baseline",
-  gap: 12,
-  flexWrap: "wrap",
-  marginBottom: 14,
-};
-
-const title: React.CSSProperties = { margin: 0, fontSize: 30, fontWeight: 900 };
-
-const pill: React.CSSProperties = {
-  fontSize: 13,
-  padding: "6px 10px",
-  borderRadius: 999,
-  border: "1px solid #e5e5e5",
-  background: "#fafafa",
-  color: "#333",
-};
-
-const tabs: React.CSSProperties = { display: "flex", gap: 8, marginBottom: 16 };
-
-const tabBtn = (active: boolean): React.CSSProperties => ({
-  padding: "8px 12px",
-  borderRadius: 10,
-  border: "1px solid #ddd",
-  background: active ? "#111" : "white",
-  color: active ? "white" : "#111",
-  cursor: "pointer",
-  fontWeight: 700,
-});
-
-const card: React.CSSProperties = {
-  border: "1px solid #e6e6e6",
-  borderRadius: 16,
-  background: "white",
-  padding: 16,
-};
-
-const label: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 800,
-  marginBottom: 6,
-};
-
-const inputBase: React.CSSProperties = {
-  width: "100%",
-  boxSizing: "border-box",
-  padding: 10,
-  borderRadius: 12,
-  border: "1px solid #d9d9d9",
-};
-
-const selectBase: React.CSSProperties = {
-  width: "100%",
-  boxSizing: "border-box",
-  padding: 10,
-  borderRadius: 12,
-  border: "1px solid #d9d9d9",
-  background: "white",
-};
-
-const helperText: React.CSSProperties = {
-  marginTop: 6,
-  fontSize: 12,
-  opacity: 0.75,
-};
-
-const tableWrap: React.CSSProperties = {
-  border: "1px solid #ededed",
-  borderRadius: 14,
-  overflow: "hidden",
-  marginTop: 12,
-};
-
-const headerRow: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1.35fr 1fr 1fr 0.5fr",
-  gap: 10,
-  padding: "10px 12px",
-  background: "#fafafa",
-  borderBottom: "1px solid #eee",
-  fontSize: 12,
-  fontWeight: 800,
-  color: "#444",
-};
-
-const playerRow: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1.35fr 1fr 1fr 0.5fr",
-  gap: 10,
-  padding: "12px 12px",
-  borderBottom: "1px solid #f0f0f0",
-  alignItems: "start",
-};
-
-const pointsCell: React.CSSProperties = {
-  textAlign: "right",
-  fontWeight: 900,
-  fontSize: 22,
-  paddingTop: 8,
-};
-
-const errorText: React.CSSProperties = {
-  marginTop: 6,
-  fontSize: 12,
-  color: "#b91c1c",
-  fontWeight: 700,
-};
-
-const footer: React.CSSProperties = {
-  marginTop: 14,
-  padding: 14,
-  borderRadius: 14,
-  border: "1px solid #eee",
-  background: "#fafafa",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 12,
-  flexWrap: "wrap",
-};
-
-const footerTotal: React.CSSProperties = {
-  fontSize: 28,
-  fontWeight: 900,
-  marginTop: 2,
-};
-
-const btn: React.CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: 12,
-  border: "1px solid #d9d9d9",
-  background: "white",
-  cursor: "pointer",
-  fontWeight: 800,
-};
-
-const primaryBtn = (enabled: boolean): React.CSSProperties => ({
-  ...btn,
-  borderColor: enabled ? "#111" : "#bbb",
-  background: enabled ? "#111" : "#bbb",
-  color: "white",
-  cursor: enabled ? "pointer" : "not-allowed",
-});
-
-/* ---------- single tooltip (only next to Team Registration) ---------- */
-function InfoTooltip({ text }: { text: React.ReactNode }) {
+function RulesTooltip() {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLSpanElement | null>(null);
+  const root = useRef<HTMLSpanElement>(null);
 
-  React.useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (!open) return;
-      const el = rootRef.current;
-      if (!el) return;
-      if (e.target instanceof Node && el.contains(e.target)) return;
-      setOpen(false);
+  useEffect(() => {
+    function close(event: PointerEvent) {
+      if (!root.current?.contains(event.target as Node)) setOpen(false);
     }
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [open]);
+    function escape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
 
   return (
-    <span
-      ref={rootRef}
-      style={{
-        position: "relative",
-        display: "inline-flex",
-        alignItems: "center",
-      }}
+    <span className="tooltip-anchor" ref={root}
       onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)} // mobile-friendly
-        aria-label="How rank scoring works"
-        title="How rank scoring works"
-        style={{
-          width: 18,
-          height: 18,
-          borderRadius: "50%",
-          border: "1px solid #d1d5db",
-          background: "white",
-          color: "#6b7280",
-          fontSize: 12,
-          fontWeight: 800,
-          cursor: "pointer",
-          padding: 0,
-          lineHeight: 1,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        ?
-      </button>
-
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "130%",
-            left: 0,
-            width: 360,
-            maxWidth: "min(360px, 80vw)",
-            background: "#222",
-            color: "#f5f5f5",
-            padding: 12,
-            borderRadius: 12,
-            fontSize: 13,
-            lineHeight: 1.45,
-            zIndex: 9999,
-            boxShadow: "0 10px 28px rgba(0,0,0,0.25)",
-          }}
-        >
-          {text}
-        </div>
-      )}
+      onMouseLeave={() => setOpen(false)}>
+      <button className="info-button" type="button"
+        aria-label="How rank scoring works" aria-expanded={open}
+        onClick={() => setOpen(!open)}>ⓘ</button>
+      {open && <span className="tooltip-panel" role="tooltip">
+        <strong>How rank scoring works</strong>
+        <span>Each player’s score is based on two competitive ranks:</span>
+        <span>• an earlier rank (V25 Act 1)<br />• a recent rank (V25 Act 5)</span>
+        <span>The recent rank is weighted more heavily to better represent current skill.</span>
+        <span>Player scores are added together to form a team total. Teams must remain at or below the point cap to be eligible.</span>
+      </span>}
     </span>
   );
 }
 
-/* ---------- helpers ---------- */
-const emptyPlayer = (): PlayerRow => ({
-  ign: "",
-  rankA1: "iron",
-  rankA5: "iron",
-});
-
-function uid() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-/** Gentle auto-format:
- * - trims left whitespace
- * - if user types a space and no # yet, we convert the first space to #
- *   e.g. "Elaine UW" -> "Elaine#UW"
- */
-function normalizeRiotIdInput(raw: string): string {
-  let s = raw.replace(/^\s+/, "");
-  if (!s.includes("#")) {
-    const idx = s.indexOf(" ");
-    if (idx !== -1) s = s.slice(0, idx) + "#" + s.slice(idx + 1);
-  }
-  return s;
-}
-
-function isValidRiotId(value: string): boolean {
-  const s = value.trim();
-  if (!s) return false;
-  // Must be "name#tag" with at least 1 char on each side, and only one #
-  const parts = s.split("#");
-  if (parts.length !== 2) return false;
-  return parts[0].trim().length > 0 && parts[1].trim().length > 0;
-}
-
 export default function App() {
   const [teamName, setTeamName] = useState("");
-  const [players, setPlayers] = useState<PlayerRow[]>([
-    emptyPlayer(),
-    emptyPlayer(),
-    emptyPlayer(),
-    emptyPlayer(),
-    emptyPlayer(),
-  ]);
-
-  const [tab, setTab] = useState<"register" | "admin">("register");
-  const [adminRefresh, setAdminRefresh] = useState(0);
-
-  // track which Riot ID fields have been touched (to show validation messages)
-  const [touched, setTouched] = useState<boolean[]>([
-    false,
-    false,
-    false,
-    false,
-    false,
-  ]);
+  const [players, setPlayers] = useState<Player[]>(makeRoster);
+  const [touched, setTouched] = useState<boolean[]>(Array(5).fill(false));
+  const [copied, setCopied] = useState(false);
 
   const breakdown = useMemo(
-    () => players.map((p) => ({ ...p, ...scorePlayer(p.rankA1, p.rankA5) })),
-    [players]
+    () => players.map(p => scorePlayer(p.rankA1, p.rankA5)), [players]
   );
-
-  const total = useMemo(
-    () => breakdown.reduce((s, p) => s + p.final, 0),
-    [breakdown]
-  );
-  const overCap = total > TEAM_CAP;
+  const total = breakdown.reduce((sum, p) => sum + p.final, 0);
   const remaining = TEAM_CAP - total;
+  const overCap = remaining < 0;
+  const complete = teamName.trim().length > 0 && players.every(p => isValidRiotId(p.ign));
+  const progress = Math.min(100, (total / TEAM_CAP) * 100);
 
-  const idValid = useMemo(
-    () => players.map((p) => isValidRiotId(p.ign)),
-    [players]
-  );
-
-  const canSubmit =
-    teamName.trim().length > 0 &&
-    !overCap &&
-    players.length === 5 &&
-    idValid.every(Boolean);
-
-  function updatePlayer(i: number, patch: Partial<PlayerRow>) {
-    setPlayers((prev) =>
-      prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p))
-    );
+  function updatePlayer(index: number, patch: Partial<Player>) {
+    setPlayers(previous => previous.map((p, i) => i === index ? { ...p, ...patch } : p));
+    setCopied(false);
   }
-
-  function markTouched(i: number) {
-    setTouched((prev) => prev.map((v, idx) => (idx === i ? true : v)));
-  }
-
-  function resetForm() {
+  function reset() {
     setTeamName("");
-    setPlayers([
-      emptyPlayer(),
-      emptyPlayer(),
-      emptyPlayer(),
-      emptyPlayer(),
-      emptyPlayer(),
-    ]);
-    setTouched([false, false, false, false, false]);
+    setPlayers(makeRoster());
+    setTouched(Array(5).fill(false));
+    setCopied(false);
   }
 
-  function submit() {
-    if (!canSubmit) return;
-
-    addTeam({
-      id: uid(),
-      createdAt: new Date().toISOString(),
-      teamName: teamName.trim(),
-      players: players.map((p) => ({
-        ign: p.ign.trim(),
-        rankA1: p.rankA1,
-        rankA5: p.rankA5,
-      })),
-      totalPoints: total,
-    });
-
-    resetForm();
-    setTab("admin");
-    setAdminRefresh((x) => x + 1);
-  }
-
-  const teams = useMemo(() => {
-    adminRefresh;
-    return loadTeams();
-  }, [adminRefresh]);
-
-  const distribution = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const t of teams) {
-      for (const pl of t.players)
-        counts[pl.rankA5] = (counts[pl.rankA5] ?? 0) + 1;
+  async function copySummary() {
+    if (!complete) return;
+    const rows = players.map((player, i) =>
+      (i + 1) + ". " + player.ign.trim() + " | V25 A1: " +
+      RANK_OPTIONS.find(r => r.key === player.rankA1)?.label +
+      " | V25 A5: " + RANK_OPTIONS.find(r => r.key === player.rankA5)?.label +
+      " | " + breakdown[i].final + " pts"
+    );
+    const report = [
+      "VALORANT @ UW — Team Rank Calculator",
+      "Team: " + teamName.trim(),
+      ...rows,
+      "Team score: " + total + " / " + TEAM_CAP,
+      "Status: " + (overCap ? "Over cap" : "Within cap"),
+      "Calculated estimate only — not a tournament registration."
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(report);
+      setCopied(true);
+    } catch {
+      window.prompt("Copy your team summary:", report);
     }
-    return counts;
-  }, [teams]);
-
-  // ✅ previous tooltip description you liked (no equations)
-  const registrationTooltip = (
-    <>
-      <div style={{ fontWeight: 900, marginBottom: 8 }}>
-        How rank scoring works
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        Each player’s score is based on two competitive ranks:
-      </div>
-      <ul style={{ margin: "0 0 8px 18px" }}>
-        <li>an earlier rank (V25 Act 1)</li>
-        <li>a recent rank (V25 Act 5)</li>
-      </ul>
-      <div style={{ marginBottom: 8 }}>
-        The recent rank is weighted more heavily to better represent current
-        skill.
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        Player scores are added together to form a team total. Teams must remain
-        at or below the point cap to be eligible.
-      </div>
-    </>
-  );
+  }
 
   return (
-    <div style={page}>
-      <div style={topBar}>
-        <h1 style={title}>VALORANT@UW Team Rank Calculator</h1>
-        <span style={pill}>
-          Team cap: <b>{TEAM_CAP}</b> points
-        </span>
-      </div>
+    <div className="site-shell">
+      <header className="site-header">
+        <div className="brand-mark" aria-hidden="true"><span>V</span></div>
+        <div className="brand-text"><strong>VALORANT <span>@ UW</span></strong><small>TOURNAMENT TOOLS</small></div>
+        <div className="header-cap"><span className="status-dot" /> {TEAM_CAP} POINT CAP</div>
+      </header>
 
-      <div style={tabs}>
-        <button
-          style={tabBtn(tab === "register")}
-          onClick={() => setTab("register")}
-        >
-          Registration
-        </button>
-        <button
-          style={tabBtn(tab === "admin")}
-          onClick={() => {
-            setTab("admin");
-            setAdminRefresh((x) => x + 1);
-          }}
-        >
-          Organizer View
-        </button>
-      </div>
+      <main>
+        <section className="hero">
+          <div className="eyebrow"><span className="eyebrow-line" /> COMPETITIVE TEAM BUILDER</div>
+          <h1>Build your roster.<br /><span>Stay within the cap.</span></h1>
+          <p>Check your five-player team against the tournament rank limit using two competitive rank snapshots.</p>
+          <div className="hero-stats">
+            <div><strong>05</strong><span>PLAYERS</span></div>
+            <div><strong>30<span>%</span></strong><span>V25 ACT 1</span></div>
+            <div><strong>70<span>%</span></strong><span>V25 ACT 5</span></div>
+            <div><strong>{TEAM_CAP}</strong><span>MAX POINTS</span></div>
+          </div>
+        </section>
 
-      {tab === "register" ? (
-        <div style={card}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 6,
-            }}
-          >
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 24,
-                fontWeight: 900,
-                lineHeight: 1.1,
-              }}
-            >
-              Team Registration
-            </h2>
-            <div style={{ transform: "translateY(1px)" }}>
-              <InfoTooltip text={registrationTooltip} />
+        <section className="calculator-card" aria-labelledby="calculator-title">
+          <div className="section-heading">
+            <div>
+              <span className="section-kicker">01 / TEAM SETUP</span>
+              <div className="heading-with-help">
+                <h2 id="calculator-title">Team Rank Calculator</h2>
+                <RulesTooltip />
+              </div>
             </div>
+            <span className="draft-pill">LIVE CALCULATION</span>
           </div>
 
-          <div style={{ marginTop: 12 }}>
-            <div style={label}>Team Name</div>
-            <input
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              placeholder="e.g., Husky Phantoms"
-              style={inputBase}
-            />
+          <label className="field-block" htmlFor="team-name">
+            <span className="field-label">TEAM NAME</span>
+            <input id="team-name" className="field-control team-input"
+              value={teamName} maxLength={60}
+              onChange={event => { setTeamName(event.target.value); setCopied(false); }}
+              placeholder="e.g. Husky Phantoms" />
+          </label>
+
+          <div className="roster-heading">
+            <div><span className="section-kicker">02 / YOUR ROSTER</span><h3>Players <span>({players.length}/5)</span></h3></div>
+            <p>Enter Riot IDs and both act ranks</p>
           </div>
 
-          <div style={helperText}>
-            Player Riot ID format: <b>Name#TAG</b> (example:{" "}
-            <b>UW Chungus#velle</b>)
+          <div className="roster-head" aria-hidden="true">
+            <span>PLAYER / RIOT ID</span><span>V25 ACT 1 <small>30%</small></span>
+            <span>V25 ACT 5 <small>70%</small></span><span>POINTS</span>
           </div>
-
-          <div style={tableWrap}>
-            <div style={headerRow}>
-              <div>Player</div>
-              <div>Rank (V25 A1)</div>
-              <div>Rank (V25 A5)</div>
-              <div style={{ textAlign: "right" }}>Points</div>
-            </div>
-
-            {players.map((p, i) => {
-              const valid = idValid[i];
-              const showError = touched[i] && !valid;
-
-              const inputStyle: React.CSSProperties = {
-                ...inputBase,
-                borderColor: showError
-                  ? "#ef4444"
-                  : valid && p.ign.trim()
-                  ? "#10b981"
-                  : "#d9d9d9",
-              };
-
+          <div className="roster-list">
+            {players.map((player, index) => {
+              const invalid = touched[index] && player.ign.trim() !== "" && !isValidRiotId(player.ign);
               return (
-                <div key={i} style={playerRow}>
-                  <div>
-                    <input
-                      value={p.ign}
-                      onChange={(e) => {
-                        const next = normalizeRiotIdInput(e.target.value);
-                        updatePlayer(i, { ign: next });
-                      }}
-                      onBlur={() => markTouched(i)}
-                      placeholder={`Player ${i + 1} Riot ID#tagline`}
-                      style={inputStyle}
-                      inputMode="text"
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                    {showError && (
-                      <div style={errorText}>
-                        Please use the format Name#TAG (example: UW
-                        Chungus#velle)
-                      </div>
-                    )}
+                <div className="player-row" key={index}>
+                  <div className="player-id">
+                    <label htmlFor={"riot-" + index} className="mobile-label">PLAYER {index + 1} · RIOT ID</label>
+                    <div className="riot-field">
+                      <span className="player-index">{String(index + 1).padStart(2, "0")}</span>
+                      <input id={"riot-" + index} className={"field-control riot-input" + (invalid ? " invalid" : "")}
+                        value={player.ign} onChange={event => updatePlayer(index, { ign: event.target.value })}
+                        onBlur={() => setTouched(previous => previous.map((value, i) => i === index ? true : value))}
+                        placeholder={"Player " + (index + 1) + " Riot ID#tagline"} autoComplete="off" spellCheck={false}
+                        aria-invalid={invalid} aria-describedby={invalid ? "riot-error-" + index : undefined} />
+                    </div>
+                    {invalid && <span className="field-error" id={"riot-error-" + index}>Use a Riot ID such as Player Name#UW25 (name 3–16 characters, tag 3–5 letters or numbers).</span>}
                   </div>
-
-                  <select
-                    value={p.rankA1}
-                    onChange={(e) =>
-                      updatePlayer(i, { rankA1: e.target.value as RankKey })
-                    }
-                    style={selectBase}
-                  >
-                    {RANK_OPTIONS.map((r) => (
-                      <option key={r.key} value={r.key}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    value={p.rankA5}
-                    onChange={(e) =>
-                      updatePlayer(i, { rankA5: e.target.value as RankKey })
-                    }
-                    style={selectBase}
-                  >
-                    {RANK_OPTIONS.map((r) => (
-                      <option key={r.key} value={r.key}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div style={pointsCell}>{breakdown[i].final}</div>
+                  <div className="rank-field">
+                    <label className="mobile-label" htmlFor={"a1-" + index}>V25 ACT 1 · 30%</label>
+                    <select id={"a1-" + index} className="field-control rank-select" value={player.rankA1}
+                      onChange={event => updatePlayer(index, { rankA1: event.target.value as RankKey })}>
+                      {RANK_OPTIONS.map(rank => <option key={rank.key} value={rank.key}>{rank.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="rank-field">
+                    <label className="mobile-label" htmlFor={"a5-" + index}>V25 ACT 5 · 70%</label>
+                    <select id={"a5-" + index} className="field-control rank-select" value={player.rankA5}
+                      onChange={event => updatePlayer(index, { rankA5: event.target.value as RankKey })}>
+                      {RANK_OPTIONS.map(rank => <option key={rank.key} value={rank.key}>{rank.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="player-points"><span className="mobile-label">POINTS</span><strong>{breakdown[index].final}</strong></div>
                 </div>
               );
             })}
           </div>
 
-          <div style={footer}>
-            <div style={{ display: "grid", gap: 4 }}>
-              <div style={{ fontSize: 12, opacity: 0.8, fontWeight: 800 }}>
-                Team Total
+          <div className="score-panel">
+            <div className="score-top">
+              <div><span className="score-caption">TEAM SCORE</span>
+                <div className="score-number">{total}<span> / {TEAM_CAP}</span></div>
               </div>
-              <div style={footerTotal}>{total}</div>
-              <div style={{ fontSize: 12, opacity: 0.85 }}>
-                {overCap ? (
-                  <span style={{ color: "#b91c1c", fontWeight: 900 }}>
-                    Over cap by {Math.abs(remaining)} points
-                  </span>
-                ) : (
-                  <span style={{ color: "#0f7a2e", fontWeight: 900 }}>
-                    {remaining} points remaining
-                  </span>
-                )}
+              <div className={"eligibility " + (overCap ? "over" : "within")}>
+                <span className="eligibility-dot" /> {overCap ? "OVER CAP" : "WITHIN CAP"}
               </div>
             </div>
-
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <button style={btn} onClick={resetForm}>
-                Reset
-              </button>
-              <button
-                style={primaryBtn(canSubmit)}
-                onClick={submit}
-                disabled={!canSubmit}
-              >
-                Submit Team
-              </button>
+            <div className="score-track" role="progressbar" aria-label="Team points used"
+              aria-valuenow={Math.min(total, TEAM_CAP)} aria-valuemin={0} aria-valuemax={TEAM_CAP}>
+              <div className={"score-fill" + (overCap ? " over-fill" : "")} style={{ width: progress + "%" }} />
+            </div>
+            <p className={"score-help" + (overCap ? " score-warning" : "")}>
+              {overCap ? "Reduce your team score by " + Math.abs(remaining) + " point(s) to meet the limit." :
+                remaining + " points remaining before your team reaches the cap."}
+            </p>
+            <div className="actions">
+              <button type="button" className="reset-btn" onClick={reset}>Reset roster</button>
+              <button type="button" className="primary-btn" disabled={!complete}
+                onClick={copySummary}>{copied ? "✓ Copied summary" : "Copy team summary ↗"}</button>
             </div>
           </div>
-
-          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
-            Note: This demo stores submissions in this browser only (local
-            storage).
-          </div>
-        </div>
-      ) : (
-        <div style={card}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 10,
-              flexWrap: "wrap",
-            }}
-          >
-            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900 }}>
-              Organizer View
-            </h2>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              <button style={btn} onClick={() => setAdminRefresh((x) => x + 1)}>
-                Refresh
-              </button>
-              <button
-                style={btn}
-                onClick={() => {
-                  clearTeams();
-                  setAdminRefresh((x) => x + 1);
-                }}
-              >
-                Clear All (local)
-              </button>
-            </div>
-          </div>
-
-          <div style={{ marginTop: 10, opacity: 0.85 }}>
-            Total teams saved in this browser: <b>{teams.length}</b>
-          </div>
-
-          <h3 style={{ marginTop: 16, marginBottom: 8, fontSize: 16 }}>
-            Rank Distribution (V25 A5)
-          </h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {Object.keys(distribution).length === 0 ? (
-              <div style={{ opacity: 0.7 }}>No teams yet.</div>
-            ) : (
-              Object.entries(distribution)
-                .sort((a, b) => b[1] - a[1])
-                .map(([rank, count]) => (
-                  <span
-                    key={rank}
-                    style={{
-                      border: "1px solid #eee",
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      background: "#fafafa",
-                      fontSize: 13,
-                    }}
-                  >
-                    <b>{rank}</b>: {count}
-                  </span>
-                ))
-            )}
-          </div>
-
-          <h3 style={{ marginTop: 18, marginBottom: 10, fontSize: 16 }}>
-            Teams
-          </h3>
-          <div style={{ display: "grid", gap: 10 }}>
-            {teams.map((t) => (
-              <div
-                key={t.id}
-                style={{
-                  border: "1px solid #eee",
-                  borderRadius: 14,
-                  padding: 12,
-                  background: t.totalPoints > TEAM_CAP ? "#fff5f5" : "white",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 900 }}>
-                      {t.teamName}
-                    </div>
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>
-                      Submitted: {new Date(t.createdAt).toLocaleString()}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div
-                      style={{ fontSize: 12, opacity: 0.7, fontWeight: 800 }}
-                    >
-                      Total
-                    </div>
-                    <div style={{ fontSize: 22, fontWeight: 900 }}>
-                      {t.totalPoints}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 900,
-                        color: t.totalPoints > TEAM_CAP ? "#b91c1c" : "#0f7a2e",
-                      }}
-                    >
-                      {t.totalPoints > TEAM_CAP ? "OVER CAP" : "OK"}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
-                  {t.players.map((p, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.2fr 1fr 1fr",
-                        gap: 10,
-                        padding: "6px 8px",
-                        borderRadius: 10,
-                        background: "#fafafa",
-                        border: "1px solid #f0f0f0",
-                        fontSize: 13,
-                      }}
-                    >
-                      <div>
-                        <b>{p.ign}</b>
-                      </div>
-                      <div>A1: {p.rankA1}</div>
-                      <div style={{ opacity: 0.85 }}>A5: {p.rankA5}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
-            Tip: If you want shared submissions across devices, we can swap
-            local storage for Supabase later.
-          </div>
-        </div>
-      )}
+          <p className="disclaimer">This is an eligibility calculator, not a registration form. No team data is sent to tournament organizers or stored on a server.</p>
+        </section>
+      </main>
+      <footer className="site-footer"><span>VALORANT @ UW</span><span>Built for balanced competition · Unofficial community tool</span></footer>
     </div>
   );
 }
