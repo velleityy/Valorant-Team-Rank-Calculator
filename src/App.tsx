@@ -199,7 +199,7 @@ export default function App() {
               <div className={"score-fill" + (overCap ? " over-fill" : "")} style={{ width: progress + "%" }} />
             </div>
             <p className={"score-help" + (overCap ? " score-warning" : "")}>
-              {overCap ? "Your team is "  + Math.abs(remaining) + " point(s) over the limit. Try adjusting your lineup." :
+              {overCap ? "Your team is " + Math.abs(remaining) + (Math.abs(remaining) === 1 ? " point" : " points") + " over the limit. Try adjusting your lineup." :
                 remaining + " points left before you reach the cap."}
             </p>
             <div className="actions">
