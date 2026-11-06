@@ -40,9 +40,9 @@ function RulesTooltip() {
       {open && <span className="tooltip-panel" role="tooltip">
         <strong>How rank scoring works</strong>
         <span>Each player’s score is based on two competitive ranks:</span>
-        <span>• an earlier rank (V25 Act 1)<br />• a recent rank (V25 Act 5)</span>
-        <span>The recent rank is weighted more heavily to better represent current skill.</span>
-        <span>Player scores are added together to form a team total. Teams must remain at or below the point cap to be eligible.</span>
+        <span>• Your rank from V26 Act 4 (30%)<br />• Your rank from V26 Act 6 (70%)</span>
+        <span>Your more recent rank counts more, so your score better reflects how you're playing now.</span>
+        <span>We add all five players' scores together. Your team needs 85 points or fewer to stay within the cap.</span>
       </span>}
     </span>
   );
@@ -77,9 +77,9 @@ export default function App() {
   async function copySummary() {
     if (!complete) return;
     const rows = players.map((player, i) =>
-      (i + 1) + ". " + player.ign.trim() + " | V25 A1: " +
+      (i + 1) + ". " + player.ign.trim() + " | V26 Act 4: " +
       RANK_OPTIONS.find(r => r.key === player.rankA1)?.label +
-      " | V25 A5: " + RANK_OPTIONS.find(r => r.key === player.rankA5)?.label +
+      " | V26 Act 6: " + RANK_OPTIONS.find(r => r.key === player.rankA5)?.label +
       " | " + breakdown[i].final + " pts"
     );
     const report = [
@@ -87,7 +87,7 @@ export default function App() {
       "Team: " + teamName.trim(),
       ...rows,
       "Team score: " + total + " / " + TEAM_CAP,
-      "Status: " + (overCap ? "Over cap" : "Within cap"),
+      "Status: " + (overCap ? "Over the cap" : "Within the cap"),
       "Calculated estimate only — not a tournament registration."
     ].join("\n");
     try {
@@ -110,11 +110,11 @@ export default function App() {
         <section className="hero">
           <div className="eyebrow"><span className="eyebrow-line" /> COMPETITIVE TEAM BUILDER</div>
           <h1>Build your roster.<br /><span>Stay within the cap.</span></h1>
-          <p>Check your five-player team against the tournament rank limit using two competitive rank snapshots.</p>
+          <p>Enter your team's ranks to see where you stand against the 85-point limit.</p>
           <div className="hero-stats">
             <div><strong>05</strong><span>PLAYERS</span></div>
-            <div><strong>30<span>%</span></strong><span>V25 ACT 1</span></div>
-            <div><strong>70<span>%</span></strong><span>V25 ACT 5</span></div>
+            <div><strong>30<span>%</span></strong><span>V26 ACT 4</span></div>
+            <div><strong>70<span>%</span></strong><span>V26 ACT 6</span></div>
             <div><strong>{TEAM_CAP}</strong><span>MAX POINTS</span></div>
           </div>
         </section>
@@ -141,12 +141,12 @@ export default function App() {
 
           <div className="roster-heading">
             <div><span className="section-kicker">02 / YOUR ROSTER</span><h3>Players <span>({players.length}/5)</span></h3></div>
-            <p>Enter Riot IDs and both act ranks</p>
+            <p>Add each player's Riot ID and ranks</p>
           </div>
 
           <div className="roster-head" aria-hidden="true">
-            <span>PLAYER / RIOT ID</span><span>V25 ACT 1 <small>30%</small></span>
-            <span>V25 ACT 5 <small>70%</small></span><span>POINTS</span>
+            <span>PLAYER / RIOT ID</span><span>V26 ACT 4 <small>30%</small></span>
+            <span>V26 ACT 6 <small>70%</small></span><span>POINTS</span>
           </div>
           <div className="roster-list">
             {players.map((player, index) => {
@@ -166,14 +166,14 @@ export default function App() {
                     {invalid && <span className="field-error" id={"riot-error-" + index}>Use a Riot ID such as Player Name#UW25 (name 3–16 characters, tag 3–5 letters or numbers).</span>}
                   </div>
                   <div className="rank-field">
-                    <label className="mobile-label" htmlFor={"a1-" + index}>V25 ACT 1 · 30%</label>
+                    <label className="mobile-label" htmlFor={"a1-" + index}>V26 ACT 4 · 30%</label>
                     <select id={"a1-" + index} className="field-control rank-select" value={player.rankA1}
                       onChange={event => updatePlayer(index, { rankA1: event.target.value as RankKey })}>
                       {RANK_OPTIONS.map(rank => <option key={rank.key} value={rank.key}>{rank.label}</option>)}
                     </select>
                   </div>
                   <div className="rank-field">
-                    <label className="mobile-label" htmlFor={"a5-" + index}>V25 ACT 5 · 70%</label>
+                    <label className="mobile-label" htmlFor={"a5-" + index}>V26 ACT 6 · 70%</label>
                     <select id={"a5-" + index} className="field-control rank-select" value={player.rankA5}
                       onChange={event => updatePlayer(index, { rankA5: event.target.value as RankKey })}>
                       {RANK_OPTIONS.map(rank => <option key={rank.key} value={rank.key}>{rank.label}</option>)}
@@ -191,7 +191,7 @@ export default function App() {
                 <div className="score-number">{total}<span> / {TEAM_CAP}</span></div>
               </div>
               <div className={"eligibility " + (overCap ? "over" : "within")}>
-                <span className="eligibility-dot" /> {overCap ? "OVER CAP" : "WITHIN CAP"}
+                <span className="eligibility-dot" /> {overCap ? "OVER THE CAP" : "WITHIN THE CAP"}
               </div>
             </div>
             <div className="score-track" role="progressbar" aria-label="Team points used"
@@ -199,19 +199,19 @@ export default function App() {
               <div className={"score-fill" + (overCap ? " over-fill" : "")} style={{ width: progress + "%" }} />
             </div>
             <p className={"score-help" + (overCap ? " score-warning" : "")}>
-              {overCap ? "Reduce your team score by " + Math.abs(remaining) + " point(s) to meet the limit." :
-                remaining + " points remaining before your team reaches the cap."}
+              {overCap ? "Your team is " + Math.abs(remaining) + (Math.abs(remaining) === 1 ? " point" : " points") + " over the limit. Try adjusting your lineup." :
+                remaining + " points left before you reach the cap."}
             </p>
             <div className="actions">
               <button type="button" className="reset-btn" onClick={reset}>Reset roster</button>
               <button type="button" className="primary-btn" disabled={!complete}
-                onClick={copySummary}>{copied ? "✓ Copied summary" : "Copy team summary ↗"}</button>
+                onClick={copySummary}>{copied ? "✓ Results copied" : "Copy team results ↗"}</button>
             </div>
           </div>
           <p className="disclaimer">This is an eligibility calculator, not a registration form. No team data is sent to tournament organizers or stored on a server.</p>
         </section>
       </main>
-      <footer className="site-footer"><span>VALORANT @ UW</span><span>Built for balanced competition · Unofficial community tool</span></footer>
+      <footer className="site-footer">Built by <strong>Elaine Hsu</strong><span aria-hidden="true"> · </span>Est. 2025</footer>
     </div>
   );
 }
