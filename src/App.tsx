@@ -109,7 +109,7 @@ export default function App() {
       <main>
         <section className="hero">
           <div className="eyebrow"><span className="eyebrow-line" /> COMPETITIVE TEAM BUILDER</div>
-          <h1>Build your roster.<br /><span>Stay within the cap.</span></h1>
+          <h1>Build your roster.<br /><span>Prove your eligibility.</span></h1>
           <p>Enter your team's ranks to see where you stand against the 85-point limit.</p>
           <div className="hero-stats">
             <div><strong>05</strong><span>PLAYERS</span></div>
