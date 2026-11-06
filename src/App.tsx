@@ -103,14 +103,13 @@ export default function App() {
       <header className="site-header">
         <div className="brand-mark" aria-hidden="true"><span>V</span></div>
         <div className="brand-text"><strong>VALORANT <span>@ UW</span></strong><small>TOURNAMENT TOOLS</small></div>
-        <div className="header-cap"><span className="status-dot" /> {TEAM_CAP} POINT CAP</div>
       </header>
 
       <main>
         <section className="hero">
           <div className="eyebrow"><span className="eyebrow-line" /> COMPETITIVE TEAM BUILDER</div>
           <h1>Build your roster.<br /><span>Prove your eligibility.</span></h1>
-          <p>Enter your team's ranks to see where you stand against the 85-point limit.</p>
+          <p>Enter each player's ranks to calculate your team's score and check eligibility.</p>
           <div className="hero-stats">
             <div><strong>05</strong><span>PLAYERS</span></div>
             <div><strong>30<span>%</span></strong><span>V26 ACT 4</span></div>
