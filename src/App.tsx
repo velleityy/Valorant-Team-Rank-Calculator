@@ -211,7 +211,7 @@ export default function App() {
           <p className="disclaimer">This is an eligibility calculator, not a registration form. No team data is sent to tournament organizers or stored on a server.</p>
         </section>
       </main>
-      <footer className="site-footer">Built by <strong>Elaine Hsu</strong><span aria-hidden="true"> · </span>Est. 2025</footer>
+      <footer className="site-footer">Built by <a href="https://www.linkedin.com/in/elaineshsu/" target="_blank" rel="noopener noreferrer" aria-label="Elaine Hsu on LinkedIn">Elaine Hsu</a><span aria-hidden="true"> · </span>Est. 2025</footer>
     </div>
   );
 }
