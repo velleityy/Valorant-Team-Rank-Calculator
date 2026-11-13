@@ -101,8 +101,17 @@ export default function App() {
   return (
     <div className="site-shell">
       <header className="site-header">
-        <div className="brand-mark" aria-hidden="true"><span>V</span></div>
-        <div className="brand-text"><strong>VALORANT <span>@ UW</span></strong><small>TOURNAMENT TOOLS</small></div>
+        <img
+          className="brand-logo"
+          src={`${import.meta.env.BASE_URL}valorant-uw-logo.svg`}
+          alt="VALORANT at UW logo"
+          width="46"
+          height="46"
+        />
+        <div className="brand-text">
+          <strong><span className="brand-name">VALORANT</span> <span className="brand-uw">@ UW</span></strong>
+          <small>TOURNAMENT TOOLS</small>
+        </div>
       </header>
 
       <main>
